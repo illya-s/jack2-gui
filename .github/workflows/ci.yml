@@ -1,27 +1,20 @@
-name: CI
+name: Release
 
 on:
   push:
-    branches: [main, master]
-  pull_request:
-  workflow_dispatch:
+    branches: [main]
+
+permissions:
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
 
 jobs:
-  build:
-    name: build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            upload: true
-          - os: ubuntu-latest
-            upload: false
+  release:
+    name: build and release
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -33,23 +26,31 @@ jobs:
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Install JACK2 (macOS)
-        if: runner.os == 'macOS'
+      - name: Install JACK2
         run: brew install jack pkgconf
-
-      - name: Install JACK (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libjack-dev pkg-config
 
       - name: Build
         run: cargo build --release --locked
 
-      - name: Upload macOS binary
-        if: matrix.upload
-        uses: actions/upload-artifact@v4
+      - name: Package
+        id: package
+        run: |
+          VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TAG="v${VERSION}-${SHORT_SHA}"
+          ASSET="jack2-gui-macos"
+          mkdir -p dist
+          cp target/release/jack2-gui "dist/${ASSET}"
+          chmod +x "dist/${ASSET}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "name=v${VERSION} (${SHORT_SHA})" >> "$GITHUB_OUTPUT"
+          echo "asset=dist/${ASSET}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: jack2-gui-macos
-          path: target/release/jack2-gui
-          if-no-files-found: error
+          tag_name: ${{ steps.package.outputs.tag }}
+          name: ${{ steps.package.outputs.name }}
+          generate_release_notes: true
+          make_latest: true
+          files: ${{ steps.package.outputs.asset }}
