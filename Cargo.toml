@@ -1,0 +1,17 @@
+[package]
+name = "jack2-gui"
+version = "0.1.0"
+edition = "2021"
+description = "Автоматизация запуска JACK2, загрузки netmanager и коммутации аудиоканалов на macOS"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "jack2-gui"
+path = "src/main.rs"
+
+[dependencies]
+# Клиентское API JACK (libjack). На macOS требуется установленный JACK2.
+jack = "0.13"
+# Корректная обработка Ctrl+C, чтобы завершить дочерний jackd.
+ctrlc = "3.4"
