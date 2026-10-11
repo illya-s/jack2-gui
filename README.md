@@ -13,7 +13,19 @@ system:capture_i  ->  StreamPC:to_slave_i    (i = 1..=26)
 - Rust / Cargo
 - Устройство CoreAudio `PaeFireStudioAudioEngine:0`
 
-## Сборка и запуск
+## Запуск готового бинарника
+
+Релиз — universal binary (Intel + Apple Silicon). Из каталога, куда скачан файл:
+
+```
+chmod +x ./jack2-gui-macos
+xattr -d com.apple.quarantine ./jack2-gui-macos
+./jack2-gui-macos
+```
+
+Нужен префикс `./`: macOS не ищет исполняемые файлы в текущей папке.
+
+## Сборка из исходников
 
 ```
 cargo build --release

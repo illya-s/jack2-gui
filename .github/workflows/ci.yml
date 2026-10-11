@@ -22,6 +22,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
@@ -29,10 +31,13 @@ jobs:
       - name: Install JACK2
         run: brew install jack pkgconf
 
-      - name: Build
-        run: cargo build --release --locked
+      - name: Build arm64
+        run: cargo build --release --locked --target aarch64-apple-darwin
 
-      - name: Package
+      - name: Build x86_64
+        run: cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Package universal binary
         id: package
         run: |
           VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
@@ -40,8 +45,12 @@ jobs:
           TAG="v${VERSION}-${SHORT_SHA}"
           ASSET="jack2-gui-macos"
           mkdir -p dist
-          cp target/release/jack2-gui "dist/${ASSET}"
+          lipo -create \
+            target/aarch64-apple-darwin/release/jack2-gui \
+            target/x86_64-apple-darwin/release/jack2-gui \
+            -output "dist/${ASSET}"
           chmod +x "dist/${ASSET}"
+          lipo -info "dist/${ASSET}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "name=v${VERSION} (${SHORT_SHA})" >> "$GITHUB_OUTPUT"
           echo "asset=dist/${ASSET}" >> "$GITHUB_OUTPUT"
